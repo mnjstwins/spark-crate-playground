@@ -34,7 +34,7 @@ object Main {
         val tickDbg = dbg(ts) _
         tickDbg("Next tick")
 
-        val rows = sc.parallelize(1 to size + 1, parallelism).map { series =>
+        val rows = sc.parallelize(1 to size, parallelism).map { series =>
           DataRow(new Timestamp(ts), s"Series-$series", Math.random())
         }
         sqlContext.createDataFrame(rows)
