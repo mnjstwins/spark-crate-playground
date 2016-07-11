@@ -25,3 +25,10 @@ CLUSTERED INTO 40 shards with (number_of_replicas = 1, refresh_interval=10000)
 ```
 spark-submit --master spark://diver.cluster:7077 --deploy-mode cluster --total-executor-cores 10 --class Main hdfs:///spark-crate-playground-assembly-0.0.jar data-01.cluster:4300,data-02.cluster:4300/doc 100000 60
 ```
+
+### Options
+
+Spark job expects next arguments:
+- database connection string \<dbHost\>[:\<dbPosrt\>[,\<dbHost\>:\<dbPosrt\>*]/\<dbName\>]
+- number of records to ingest per next tick
+- number of ticks per minute (by default 1)
