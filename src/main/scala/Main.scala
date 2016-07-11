@@ -5,6 +5,7 @@ import akka.actor.{Actor, Props, ActorSystem}
 import org.apache.spark._
 import org.apache.spark.sql.SQLContext
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.util.Try
@@ -17,6 +18,8 @@ object Main {
     val size = args(1).toInt
     val freq = if (args.length < 3) 1 else args(2).toInt
 
+    val parallelism = if (args.length < 4) 10 else args(3).toInt
+
     val JDBCDriver = "io.crate.client.jdbc.CrateDriver"
     val ConnectionURL = s"jdbc:crate://$dbURI"
 
@@ -27,17 +30,19 @@ object Main {
     val sqlContext = SQLContext.getOrCreate(sc)
 
     byClock(freq) { ts =>
-      val tickDbg = dbg(ts)_
-      tickDbg("Next tick")
+      Future {
+        val tickDbg = dbg(ts) _
+        tickDbg("Next tick")
 
-      val rows = Stream.range(1, size).map { series =>
-        DataRow(new Timestamp(ts), s"Series-$series", Math.random())
-      }
-      sqlContext.createDataFrame(rows)
-        .write.mode("append")
-        .jdbc(ConnectionURL, table, Map("driver" -> JDBCDriver))
+        val rows = sc.parallelize(1 to size + 1, parallelism).map { series =>
+          DataRow(new Timestamp(ts), s"Series-$series", Math.random())
+        }
+        sqlContext.createDataFrame(rows)
+          .write.mode("append")
+          .jdbc(ConnectionURL, table, Map("driver" -> JDBCDriver))
 
-      tickDbg(s"Persisted ${rows.length}")
+        tickDbg(s"Persisted $size")
+      }.failed foreach {System.err.println}
     }
   }
 
